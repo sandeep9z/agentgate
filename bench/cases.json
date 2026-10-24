@@ -1,0 +1,212 @@
+[
+ {
+  "id": "sg-ssh-open",
+  "tf": "resource \"aws_security_group\" \"a\" {\n  ingress {\n    from_port   = 22\n    to_port     = 22\n    protocol    = \"tcp\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\n",
+  "truth": [
+   [
+    "SG-OPEN-ADMIN",
+    "aws_security_group.a"
+   ]
+  ]
+ },
+ {
+  "id": "sg-rdp-open",
+  "tf": "resource \"aws_security_group\" \"b\" {\n  ingress {\n    from_port   = 3389\n    to_port     = 3389\n    protocol    = \"tcp\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\n",
+  "truth": [
+   [
+    "SG-OPEN-ADMIN",
+    "aws_security_group.b"
+   ]
+  ]
+ },
+ {
+  "id": "sg-https-ok (trap)",
+  "tf": "resource \"aws_security_group\" \"c\" {\n  ingress {\n    from_port   = 443\n    to_port     = 443\n    protocol    = \"tcp\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\n",
+  "truth": []
+ },
+ {
+  "id": "sg-ssh-internal (trap)",
+  "tf": "resource \"aws_security_group\" \"d\" {\n  ingress {\n    from_port   = 22\n    to_port     = 22\n    protocol    = \"tcp\"\n    cidr_blocks = [\"10.0.0.0/8\"]\n  }\n}\n",
+  "truth": []
+ },
+ {
+  "id": "sg-pg-open",
+  "tf": "resource \"aws_security_group\" \"e\" {\n  ingress {\n    from_port   = 5432\n    to_port     = 5432\n    protocol    = \"tcp\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\n",
+  "truth": [
+   [
+    "SG-OPEN-ADMIN",
+    "aws_security_group.e"
+   ]
+  ]
+ },
+ {
+  "id": "s3-public-acl",
+  "tf": "resource \"aws_s3_bucket\" \"x\" {\n  bucket = \"data\"\n  acl    = \"public-read\"\n}\n",
+  "truth": [
+   [
+    "S3-PUBLIC-ACL",
+    "aws_s3_bucket.x"
+   ]
+  ]
+ },
+ {
+  "id": "s3-private-ok (trap)",
+  "tf": "resource \"aws_s3_bucket\" \"y\" {\n  bucket = \"data\"\n  acl    = \"private\"\n}\n",
+  "truth": []
+ },
+ {
+  "id": "s3-pab-off",
+  "tf": "resource \"aws_s3_bucket_public_access_block\" \"p\" {\n  bucket = \"data\"\n  block_public_acls = false\n  block_public_policy = true\n}\n",
+  "truth": [
+   [
+    "S3-PAB-OFF",
+    "aws_s3_bucket_public_access_block.p"
+   ]
+  ]
+ },
+ {
+  "id": "rds-public-hardcoded",
+  "tf": "resource \"aws_db_instance\" \"d\" {\n  engine = \"postgres\"\n  publicly_accessible = true\n  storage_encrypted = true\n  password = \"Passw0rd!\"\n}\n",
+  "truth": [
+   [
+    "RDS-PUBLIC",
+    "aws_db_instance.d"
+   ],
+   [
+    "HARDCODED-SECRET",
+    "aws_db_instance.d"
+   ]
+  ]
+ },
+ {
+  "id": "rds-good (trap)",
+  "tf": "resource \"aws_db_instance\" \"d2\" {\n  engine = \"postgres\"\n  publicly_accessible = false\n  storage_encrypted = true\n  password = var.db_password\n}\n",
+  "truth": []
+ },
+ {
+  "id": "rds-unencrypted",
+  "tf": "resource \"aws_db_instance\" \"d3\" {\n  engine = \"mysql\"\n  publicly_accessible = false\n  password = var.pw\n}\n",
+  "truth": [
+   [
+    "RDS-NO-ENCRYPTION",
+    "aws_db_instance.d3"
+   ]
+  ]
+ },
+ {
+  "id": "ebs-unencrypted",
+  "tf": "resource \"aws_ebs_volume\" \"v\" {\n  availability_zone = \"us-east-1a\"\n  size = 50\n}\n",
+  "truth": [
+   [
+    "EBS-NO-ENCRYPTION",
+    "aws_ebs_volume.v"
+   ]
+  ]
+ },
+ {
+  "id": "ebs-ok (trap)",
+  "tf": "resource \"aws_ebs_volume\" \"v2\" {\n  availability_zone = \"us-east-1a\"\n  size = 50\n  encrypted = true\n}\n",
+  "truth": []
+ },
+ {
+  "id": "iam-wildcard",
+  "tf": "resource \"aws_iam_policy\" \"admin\" {\n  name = \"admin\"\n  policy = jsonencode({\n    Version = \"2012-10-17\"\n    Statement = [{ Effect = \"Allow\", Action = \"*\", Resource = \"*\" }]\n  })\n}\n",
+  "truth": [
+   [
+    "OTHER",
+    "aws_iam_policy.admin"
+   ]
+  ]
+ },
+ {
+  "id": "iam-scoped (trap)",
+  "tf": "resource \"aws_iam_policy\" \"ro\" {\n  name = \"ro\"\n  policy = jsonencode({\n    Version = \"2012-10-17\"\n    Statement = [{ Effect = \"Allow\", Action = \"s3:GetObject\", Resource = \"arn:aws:s3:::data/*\" }]\n  })\n}\n",
+  "truth": []
+ },
+ {
+  "id": "ec2-oversized",
+  "tf": "resource \"aws_instance\" \"big\" {\n  ami = \"ami-123\"\n  instance_type = \"p4d.24xlarge\"\n}\n",
+  "truth": [
+   [
+    "COST-OVERSIZED",
+    "aws_instance.big"
+   ]
+  ]
+ },
+ {
+  "id": "ec2-small-ok (trap)",
+  "tf": "resource \"aws_instance\" \"s\" {\n  ami = \"ami-123\"\n  instance_type = \"t3.micro\"\n}\n",
+  "truth": []
+ },
+ {
+  "id": "ec2-secret-userdata",
+  "tf": "resource \"aws_instance\" \"app\" {\n  ami = \"ami-123\"\n  instance_type = \"t3.small\"\n  user_data = \"export AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY\"\n}\n",
+  "truth": [
+   [
+    "OTHER",
+    "aws_instance.app"
+   ]
+  ]
+ },
+ {
+  "id": "s3-policy-principal-star",
+  "tf": "resource \"aws_s3_bucket_policy\" \"pol\" {\n  bucket = \"data\"\n  policy = \"{\\\"Statement\\\":[{\\\"Effect\\\":\\\"Allow\\\",\\\"Principal\\\":\\\"*\\\",\\\"Action\\\":\\\"s3:GetObject\\\",\\\"Resource\\\":\\\"arn:aws:s3:::data/*\\\"}]}\"\n}\n",
+  "truth": [
+   [
+    "OTHER",
+    "aws_s3_bucket_policy.pol"
+   ]
+  ]
+ },
+ {
+  "id": "multi-issue",
+  "tf": "resource \"aws_security_group\" \"w\" {\n  ingress {\n    from_port   = 22\n    to_port     = 22\n    protocol    = \"tcp\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\nresource \"aws_db_instance\" \"m\" {\n  engine = \"postgres\"\n  publicly_accessible = true\n  password = \"admin123\"\n}\nresource \"aws_ebs_volume\" \"mv\" {\n  size = 10\n}\n",
+  "truth": [
+   [
+    "SG-OPEN-ADMIN",
+    "aws_security_group.w"
+   ],
+   [
+    "RDS-PUBLIC",
+    "aws_db_instance.m"
+   ],
+   [
+    "RDS-NO-ENCRYPTION",
+    "aws_db_instance.m"
+   ],
+   [
+    "HARDCODED-SECRET",
+    "aws_db_instance.m"
+   ],
+   [
+    "EBS-NO-ENCRYPTION",
+    "aws_ebs_volume.mv"
+   ]
+  ]
+ },
+ {
+  "id": "clean-stack (trap)",
+  "tf": "resource \"aws_security_group\" \"ok\" {\n  ingress {\n    from_port   = 443\n    to_port     = 443\n    protocol    = \"tcp\"\n    cidr_blocks = [\"0.0.0.0/0\"]\n  }\n}\nresource \"aws_s3_bucket\" \"ok\" {\n  bucket = \"x\"\n}\nresource \"aws_instance\" \"ok\" {\n  ami = \"ami-1\"\n  instance_type = \"t3.medium\"\n}\n",
+  "truth": []
+ },
+ {
+  "id": "lambda-public-url-noauth",
+  "tf": "resource \"aws_lambda_function_url\" \"u\" {\n  function_name = \"f\"\n  authorization_type = \"NONE\"\n}\n",
+  "truth": [
+   [
+    "OTHER",
+    "aws_lambda_function_url.u"
+   ]
+  ]
+ },
+ {
+  "id": "kms-no-rotation",
+  "tf": "resource \"aws_kms_key\" \"k\" {\n  description = \"key\"\n  enable_key_rotation = false\n}\n",
+  "truth": [
+   [
+    "OTHER",
+    "aws_kms_key.k"
+   ]
+  ]
+ }
+]
