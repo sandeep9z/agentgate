@@ -1,0 +1,32 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AgentGate</title>
+<style>
+:root{--bg:#fff;--fg:#14181f;--mut:#5b6573;--bd:#d9dee5;--hi:#b42318;--me:#b54708;--lo:#475467;--ac:#0b6e4f}
+@media(prefers-color-scheme:dark){:root{--bg:#10141a;--fg:#e8ecf1;--mut:#9aa6b5;--bd:#2a323d;--hi:#ff8a80;--me:#ffb866;--lo:#9aa6b5;--ac:#4fd1a1}}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,sans-serif}
+main{max-width:960px;margin:0 auto;padding:16px}
+h1{margin:.2em 0}p.s{color:var(--mut);margin-top:0}
+textarea{width:100%;min-height:260px;box-sizing:border-box;font:13px/1.4 ui-monospace,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--bd);border-radius:8px;padding:10px}
+button{background:var(--ac);color:#fff;border:0;border-radius:8px;padding:10px 16px;font-size:15px;cursor:pointer;margin-right:8px}
+button.g{background:transparent;color:var(--fg);border:1px solid var(--bd)}
+.card{border:1px solid var(--bd);border-radius:8px;padding:12px;margin:10px 0}
+.tag{font-size:12px;font-weight:600;text-transform:uppercase}.high{color:var(--hi)}.medium{color:var(--me)}.low{color:var(--lo)}
+code{font:12px ui-monospace,monospace;background:rgba(127,127,127,.15);padding:1px 4px;border-radius:4px;word-break:break-all}
+.note{color:var(--mut);font-size:14px}
+</style></head><body><main>
+<h1>AgentGate</h1>
+<p class="s">Governed Terraform review: deterministic rules first, Nemotron second, and a verifier that rejects any claim not found in your code.</p>
+<textarea id="tf" spellcheck="false" placeholder="Paste Terraform here"></textarea>
+<p><button id="go">Review</button><button class="g" id="ex">Load example</button></p>
+<div id="out"></div>
+<script>
+const $=id=>document.getElementById(id), esc=s=>String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+$("ex").onclick=async()=>{$("tf").value=await (await fetch("/sample")).text()};
+$("go").onclick=async()=>{
+  $("out").innerHTML='<p class="note">Reviewing...</p>';
+  const r=await fetch("/",{method:"POST",body:JSON.stringify({tf:$("tf").value})});const d=await r.json();
+  if(d.error){$("out").innerHTML='<p class="note">'+esc(d.error)+'</p>';return}
+  let h='<p class="note">'+(d.llm_used?'Nemotron review: on.':'Nemotron review: off (no API key). Showing rules-only findings.')+' Findings: '+d.findings.length+'. LLM claims rejected by verifier: '+d.rejected_llm_claims.length+'.</p>';
+  for(const f of d.findings){h+='<div class="card"><span class="tag '+f.severity+'">'+f.severity+'</span> <b>'+esc(f.rule_id)+'</b> on <code>'+esc(f.resource)+'</code> <span class="note">('+f.source+')</span><br>'+esc(f.why||f.message)+'<br><span class="note">Evidence:</span> <code>'+esc(f.evidence)+'</code>'+(f.fix?'<br><span class="note">Fix:</span> <code>'+esc(f.fix)+'</code>':'')+(f.reference?'<br><a href="'+esc(f.reference.url)+'" target="_blank" rel="noopener">'+esc(f.reference.title)+'</a>':'')+'</div>'}
+  $("out").innerHTML=h};
+</script></main></body></html>
